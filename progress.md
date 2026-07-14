@@ -23,6 +23,7 @@
 | AF-8 | Implement MVP scaffold per architect plan | high | done | Verified 2026-07-14: pytest 41/41, ruff clean, compileall OK, lazy imports OK |
 | AF-9 | Live gameplay validation (SPEC §8 items 3-4) once model arrives | high | pending | Unblocked — model loaded; CPU inference ~51 ms (~20 FPS), meets ≥15 FPS minigame target |
 | AF-10 | RESULT logic corrections: double popup (seaweed), no-popup escape, safe restart | high | done | Verified 2026-07-14: pytest 44/44, ruff clean |
+| AF-11 | Live-test feedback round 1: bite-driven hook (wait_bite_fps 15), minigame 25%/75% bar rule, live preview panel | high | done | Verified 2026-07-14: pytest 45/45, ruff clean, GUI smoke OK |
 
 ## In progress
 
@@ -66,3 +67,5 @@ _(none)_
 - 2026-07-14 — YOLO classes fixed in `model/classes.yaml`; ID changes require retrain + progress.md note.
 - 2026-07-14 — Minigame mechanics confirmed by owner: float always drifts left, holding LMB moves it right (SPEC §5).
 - 2026-07-14 — RESULT semantics from owner: (a) fish+seaweed can show catch_popup twice — count once, drain popups ≥1 s before next cycle; (b) escaped fish shows NO popup — minigame gone + no popup for 2 s = loss; (c) before any restart check bobber_idle — if rod is still in water, resume WAIT_BITE instead of recasting (SPEC §5 "Логіка RESULT").
+- 2026-07-14 — Minigame control rule from owner: thresholds are fractions of the BAR width — hold LMB at <=25%, release at >=75%, keep in between; fish is pulled only while holding. minigame_zone class no longer used for control (optional in contract).
+- 2026-07-14 — WAIT_BITE runs at wait_bite_fps (15) because the bite animation is brief; hooking is detection-driven only, the bite timeout is a recast fallback.

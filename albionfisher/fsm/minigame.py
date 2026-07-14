@@ -1,15 +1,18 @@
-"""Bang-bang minigame controller with hysteresis (SPEC §5).
+"""Minigame controller: keep the float inside the bar (SPEC §5).
 
-Mechanic (confirmed by owner): the float always drifts LEFT on its own;
-holding LMB moves it RIGHT. So:
+Mechanic (confirmed by owner): the float starts at the center of the bar,
+constantly drifts LEFT trying to escape the left edge; holding LMB pushes it
+RIGHT. The fish is pulled ashore only while LMB is held, so the controller
+naturally alternates hold/release many times per catch.
 
-- float center left of zone center minus deadzone  -> HOLD (push right)
-- float center right of zone center plus deadzone  -> RELEASE (drift left)
-- inside the deadzone                              -> KEEP (no button change)
+Control rule (owner, 2026-07-14) — thresholds are fractions of the BAR width:
 
-Hysteresis widens the threshold for *flipping* the current button state, so a
-float hovering exactly at a deadzone edge does not cause rapid toggling.
-Missing zone/float bbox -> RELEASE (fail safe; caller reports the loss).
+- float position <= hold_below_frac  (default 25%) -> HOLD (push right)
+- float position >= release_above_frac (default 75%) -> RELEASE (drift left)
+- in between -> KEEP current button state
+
+The wide 25%..75% band acts as natural hysteresis: no rapid toggling.
+Missing bar/float bbox -> RELEASE (fail safe; caller reports it).
 """
 
 from enum import Enum
@@ -29,31 +32,27 @@ def _center_x(bbox: BBox) -> float:
     return (bbox[0] + bbox[2]) / 2.0
 
 
+def float_position(float_bbox: BBox, bar_bbox: BBox) -> float:
+    """Float center as a 0..1 fraction of the bar width (0 = left edge)."""
+    bar_left = bar_bbox[0]
+    bar_width = bar_bbox[2] - bar_bbox[0]
+    if bar_width <= 0:
+        return 0.0
+    return (_center_x(float_bbox) - bar_left) / bar_width
+
+
 def decide(
     float_bbox: BBox | None,
-    zone_bbox: BBox | None,
+    bar_bbox: BBox | None,
     cfg: MinigameCfg,
     currently_holding: bool,
 ) -> MinigameAction:
-    if zone_bbox is None or float_bbox is None:
+    if bar_bbox is None or float_bbox is None:
         return MinigameAction.RELEASE
 
-    zone_width = zone_bbox[2] - zone_bbox[0]
-    deadzone = cfg.deadzone_frac * zone_width
-    hysteresis = cfg.hysteresis_frac * zone_width
-    offset = _center_x(float_bbox) - _center_x(zone_bbox)  # >0: float right of center
-
-    if currently_holding:
-        # Flipping to RELEASE requires passing the deadzone plus hysteresis.
-        if offset > deadzone + hysteresis:
-            return MinigameAction.RELEASE
-        if offset < -deadzone:
-            return MinigameAction.HOLD
-        return MinigameAction.KEEP
-
-    # Not holding: flipping to HOLD requires passing deadzone plus hysteresis.
-    if offset < -(deadzone + hysteresis):
+    position = float_position(float_bbox, bar_bbox)
+    if position <= cfg.hold_below_frac:
         return MinigameAction.HOLD
-    if offset > deadzone:
+    if position >= cfg.release_above_frac:
         return MinigameAction.RELEASE
     return MinigameAction.KEEP

@@ -15,7 +15,6 @@ from albionfisher.detection.types import (
     FISHING_ZONE,
     MINIGAME_BAR,
     MINIGAME_FLOAT,
-    MINIGAME_ZONE,
 )
 from albionfisher.fsm.events import (
     ClickLmb,
@@ -106,19 +105,27 @@ class FishingFsm:
                 cmds.append(ReleaseLmb())
             cmds.append(SetFps(self._cfg.detection.idle_fps))
 
-        if state is State.CAST:
+        if state is State.FIND_ZONE:
+            cmds.append(SetFps(self._cfg.detection.idle_fps))
+        elif state is State.CAST:
             self._cast_attempts += 1
             if self._cast_target is not None:
                 x, y = self._cast_target
                 cmds.append(MoveTo(int(x), int(y)))
             cmds.append(PressLmb(self._cfg.cast.hold_ms))
-        elif state is State.HOOK:
-            cmds.append(ClickLmb())
+        elif state is State.WAIT_BITE:
+            # The bite animation is brief: raise detection FPS so YOLO does
+            # not miss bobber_bite between frames (hooking is detection-driven,
+            # never timer-driven — the bite timeout only triggers a recast).
+            cmds.append(SetFps(self._cfg.detection.wait_bite_fps))
         elif state is State.MINIGAME:
             cmds.append(SetFps(self._cfg.detection.minigame_fps))
         elif state is State.RESULT:
             self._caught_this_result = False
             self._last_popup_at = None
+
+        if state is State.HOOK:
+            cmds.append(ClickLmb())
         return cmds
 
     def _register_fail(self, now: float, reason: str) -> list[Command]:
@@ -210,7 +217,6 @@ class FishingFsm:
             return self._enter(State.RESULT, now)
 
         float_det = snapshot.best(MINIGAME_FLOAT)
-        zone_det = snapshot.best(MINIGAME_ZONE)
 
         # Float escaped past the bar boundaries -> the fish broke free.
         if float_det is not None:
@@ -222,11 +228,11 @@ class FishingFsm:
                 return cmds
 
         cmds = []
-        if zone_det is None or float_det is None:
-            cmds.append(Notify("minigame zone/float not detected"))
+        if float_det is None:
+            cmds.append(Notify("minigame float not detected"))
         action = decide(
             float_det.bbox if float_det else None,
-            zone_det.bbox if zone_det else None,
+            bar.bbox,
             self._cfg.minigame,
             self._holding,
         )

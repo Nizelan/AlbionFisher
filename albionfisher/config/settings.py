@@ -25,6 +25,7 @@ class DetectionCfg:
     model_path: str = "model/albionfisher.pt"
     conf_threshold: float = 0.5
     idle_fps: int = 3
+    wait_bite_fps: int = 15  # bite animation is brief — low FPS would miss it
     minigame_fps: int = 20
 
 
@@ -40,10 +41,10 @@ class TimeoutsCfg:
 
 @dataclass
 class MinigameCfg:
-    """Fractions are relative to the width of the detected minigame zone."""
+    """Thresholds are fractions of the minigame BAR width (0 = left edge)."""
 
-    deadzone_frac: float = 0.08
-    hysteresis_frac: float = 0.04
+    hold_below_frac: float = 0.25  # float at <=25% of the bar -> hold LMB
+    release_above_frac: float = 0.75  # float at >=75% of the bar -> release LMB
 
 
 @dataclass
@@ -108,13 +109,19 @@ def _build_section(cls: type, data: dict, section: str) -> Any:
 def _validate_semantics(s: Settings) -> None:
     if not 0.0 <= s.detection.conf_threshold <= 1.0:
         raise SettingsError("detection.conf_threshold must be within [0, 1]")
-    if s.detection.idle_fps <= 0 or s.detection.minigame_fps <= 0:
+    if (
+        s.detection.idle_fps <= 0
+        or s.detection.wait_bite_fps <= 0
+        or s.detection.minigame_fps <= 0
+    ):
         raise SettingsError("detection FPS values must be positive")
     for name in ("find_zone", "cast_confirm", "bite", "minigame_start"):
         if getattr(s.timeouts, name) <= 0:
             raise SettingsError(f"timeouts.{name} must be positive")
-    if s.minigame.deadzone_frac < 0 or s.minigame.hysteresis_frac < 0:
-        raise SettingsError("minigame fractions must be non-negative")
+    if not 0.0 <= s.minigame.hold_below_frac < s.minigame.release_above_frac <= 1.0:
+        raise SettingsError(
+            "minigame thresholds must satisfy 0 <= hold_below_frac < release_above_frac <= 1"
+        )
     if s.cast.hold_ms <= 0:
         raise SettingsError("cast.hold_ms must be positive")
     if s.stop.max_consecutive_fails <= 0:

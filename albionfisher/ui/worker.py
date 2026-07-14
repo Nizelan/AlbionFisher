@@ -26,11 +26,15 @@ log = logging.getLogger(__name__)
 WINDOW_LOST_PAUSE_S = 1.0
 
 
+PREVIEW_MAX_FPS = 10.0  # don't flood the UI thread with full frames
+
+
 class BotWorker(QThread):
     state_changed = Signal(str, float)  # state name, time in state (s)
     counters_changed = Signal(int, int, int)  # caught, lost, recasts
     fps_changed = Signal(float)
     detector_status_changed = Signal(bool, str)
+    frame_ready = Signal(object, object)  # BGR ndarray copy, tuple[Detection]
     error = Signal(str)
 
     def __init__(self, settings: Settings, window: WindowInfo) -> None:
@@ -39,6 +43,7 @@ class BotWorker(QThread):
         self._window = window
         self.stop_event = threading.Event()
         self.controller: InputController | None = None
+        self._last_preview_at = 0.0
 
     def request_stop(self) -> None:
         self.stop_event.set()
@@ -84,6 +89,10 @@ class BotWorker(QThread):
                 snapshot = DetectionSnapshot(detections=detections)
 
                 now = time.monotonic()
+                if now - self._last_preview_at >= 1.0 / PREVIEW_MAX_FPS:
+                    self._last_preview_at = now
+                    # copy: dxcam reuses its frame buffer between grabs
+                    self.frame_ready.emit(frame.copy(), detections)
                 for command in fsm.step(snapshot, now):
                     target_fps = self._dispatch(command, target_fps)
 

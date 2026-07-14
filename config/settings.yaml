@@ -4,7 +4,8 @@
 detection:
   model_path: model/albionfisher.pt
   conf_threshold: 0.5
-  idle_fps: 3          # detection FPS outside the minigame
+  idle_fps: 3          # detection FPS outside active phases
+  wait_bite_fps: 15    # FPS while waiting for the bite (animation is brief)
   minigame_fps: 20     # detection FPS during the minigame
 
 timeouts:              # seconds
@@ -14,8 +15,8 @@ timeouts:              # seconds
   minigame_start: 3.0  # minigame bar must appear after hooking
 
 minigame:
-  deadzone_frac: 0.08    # fraction of zone width around center: no action inside
-  hysteresis_frac: 0.04  # extra margin before flipping hold/release
+  hold_below_frac: 0.25    # float at <=25% of bar width -> hold LMB (push right)
+  release_above_frac: 0.75 # float at >=75% of bar width -> release LMB
 
 cast:
   hold_ms: 600         # LMB hold duration = cast strength

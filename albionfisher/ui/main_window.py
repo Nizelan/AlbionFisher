@@ -1,9 +1,11 @@
-"""Main window: window picker, Start/Stop, status, counters, settings, log."""
+"""Main window: window picker, Start/Stop, status, preview, counters, log."""
 
 import logging
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QColor, QImage, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDoubleSpinBox,
     QFormLayout,
@@ -32,6 +34,18 @@ from albionfisher.ui.log_handler import QtLogHandler
 from albionfisher.ui.worker import BotWorker
 
 log = logging.getLogger(__name__)
+
+# Distinct colors per detection class id (BGR-agnostic, used as Qt pens).
+CLASS_COLORS = {
+    0: QColor(0, 200, 255),  # fishing_zone — cyan
+    1: QColor(80, 220, 80),  # bobber_idle — green
+    2: QColor(255, 80, 80),  # bobber_bite — red
+    3: QColor(255, 200, 0),  # minigame_bar — amber
+    4: QColor(255, 120, 255),  # minigame_float — magenta
+    5: QColor(150, 150, 255),  # minigame_zone — light blue
+    6: QColor(255, 255, 255),  # catch_popup — white
+}
+PREVIEW_HEIGHT = 240
 
 
 class MainWindow(QMainWindow):
@@ -105,6 +119,23 @@ class MainWindow(QMainWindow):
         status_grid.addWidget(QLabel("Session time:"), 1, 2)
         status_grid.addWidget(self._session_label, 1, 3)
         root.addWidget(status_box)
+
+        preview_box = QGroupBox("Live preview (detections)")
+        preview_layout = QVBoxLayout(preview_box)
+        preview_toggle_row = QHBoxLayout()
+        self._preview_check = QCheckBox("Show preview")
+        self._preview_check.setChecked(True)
+        preview_toggle_row.addWidget(self._preview_check)
+        self._preview_info = QLabel("—")
+        preview_toggle_row.addWidget(self._preview_info)
+        preview_toggle_row.addStretch(1)
+        preview_layout.addLayout(preview_toggle_row)
+        self._preview_label = QLabel("preview appears after Start")
+        self._preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._preview_label.setMinimumHeight(PREVIEW_HEIGHT)
+        self._preview_label.setStyleSheet("background: #1e1e1e; color: #888;")
+        preview_layout.addWidget(self._preview_label)
+        root.addWidget(preview_box)
 
         counters_box = QGroupBox("Counters")
         counters_grid = QGridLayout(counters_box)
@@ -184,6 +215,7 @@ class MainWindow(QMainWindow):
         worker.counters_changed.connect(self._on_counters_changed)
         worker.fps_changed.connect(lambda fps: self._fps_label.setText(f"{fps:.1f}"))
         worker.detector_status_changed.connect(self._on_detector_status)
+        worker.frame_ready.connect(self._on_frame)
         worker.error.connect(lambda msg: log.error("%s", msg))
         worker.finished.connect(self._on_worker_finished)
 
@@ -226,6 +258,44 @@ class MainWindow(QMainWindow):
         self._caught_label.setText(str(caught))
         self._lost_label.setText(str(lost))
         self._recasts_label.setText(str(recasts))
+
+    def _on_frame(self, frame, detections) -> None:
+        """Render the captured frame with detection boxes into the preview."""
+        if not self._preview_check.isChecked():
+            return
+        height, width = frame.shape[:2]
+        image = QImage(
+            frame.data, width, height, frame.strides[0], QImage.Format.Format_BGR888
+        )
+        scale = PREVIEW_HEIGHT / height
+        pixmap = QPixmap.fromImage(image).scaled(
+            int(width * scale),
+            PREVIEW_HEIGHT,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+
+        painter = QPainter(pixmap)
+        for detection in detections:
+            color = CLASS_COLORS.get(detection.class_id, QColor(255, 255, 0))
+            painter.setPen(QPen(color, 2))
+            x1, y1, x2, y2 = (v * scale for v in detection.bbox)
+            painter.drawRect(int(x1), int(y1), int(x2 - x1), int(y2 - y1))
+            painter.drawText(
+                int(x1),
+                max(10, int(y1) - 3),
+                f"{detection.class_name} {detection.conf:.2f}",
+            )
+        painter.end()
+
+        self._preview_label.setPixmap(pixmap)
+        if detections:
+            summary = ", ".join(
+                f"{d.class_name}:{d.conf:.2f}" for d in detections[:6]
+            )
+        else:
+            summary = "no detections"
+        self._preview_info.setText(summary)
 
     def _on_detector_status(self, ok: bool, message: str) -> None:
         if ok:

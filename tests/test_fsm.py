@@ -9,7 +9,6 @@ from albionfisher.detection.types import (
     FISHING_ZONE,
     MINIGAME_BAR,
     MINIGAME_FLOAT,
-    MINIGAME_ZONE,
     Detection,
 )
 from albionfisher.fsm.events import (
@@ -30,8 +29,7 @@ from albionfisher.fsm.machine import (
 )
 from albionfisher.fsm.states import State
 
-BAR_BBOX = (100.0, 100.0, 500.0, 130.0)
-ZONE_BBOX = (280.0, 100.0, 320.0, 130.0)  # centered in the bar, width 40
+BAR_BBOX = (100.0, 100.0, 500.0, 130.0)  # width 400: 25% -> x=200, 75% -> x=400
 
 
 def det(class_id: int, bbox=(0.0, 0.0, 10.0, 10.0), conf: float = 0.9) -> Detection:
@@ -140,11 +138,13 @@ def test_find_zone_timeout_reports_and_retries():
 # -- CAST ---------------------------------------------------------------------
 
 
-def test_cast_confirmed_by_bobber_idle():
+def test_cast_confirmed_by_bobber_idle_raises_bite_fps():
     fsm = make_fsm()
     t = to_cast(fsm)
-    fsm.step(snap(det(BOBBER_IDLE)), t + 0.5)
+    cmds = fsm.step(snap(det(BOBBER_IDLE)), t + 0.5)
     assert fsm.state is State.WAIT_BITE
+    # bite animation is brief: WAIT_BITE must run at the higher detection FPS
+    assert SetFps(fsm._cfg.detection.wait_bite_fps) in cmds
 
 
 def test_cast_retries_then_fails_after_max_attempts():
@@ -212,26 +212,40 @@ def test_hook_timeout_goes_to_result():
 # -- MINIGAME ----------------------------------------------------------------------
 
 
-def test_minigame_holds_when_float_left_of_zone():
+def test_minigame_holds_when_float_below_25_percent():
     fsm = make_fsm()
     t = to_minigame(fsm)
+    # float center x=160 -> (160-100)/400 = 15% of the bar -> HOLD
     float_left = det(MINIGAME_FLOAT, bbox=(150.0, 100.0, 170.0, 130.0))
-    zone = det(MINIGAME_ZONE, bbox=ZONE_BBOX)
     bar = det(MINIGAME_BAR, bbox=BAR_BBOX)
-    cmds = fsm.step(snap(bar, zone, float_left), t + 0.1)
+    cmds = fsm.step(snap(bar, float_left), t + 0.1)
     assert HoldLmb() in cmds
     assert fsm.state is State.MINIGAME
 
 
-def test_minigame_releases_when_float_right_of_zone():
+def test_minigame_keeps_holding_in_the_middle_band():
+    """Between 25% and 75% the button state must not change (pulling phase)."""
     fsm = make_fsm()
     t = to_minigame(fsm)
     bar = det(MINIGAME_BAR, bbox=BAR_BBOX)
-    zone = det(MINIGAME_ZONE, bbox=ZONE_BBOX)
     float_left = det(MINIGAME_FLOAT, bbox=(150.0, 100.0, 170.0, 130.0))
-    fsm.step(snap(bar, zone, float_left), t + 0.1)  # now holding
+    fsm.step(snap(bar, float_left), t + 0.1)  # 15% -> now holding
+    # float center x=300 -> 50% of the bar: keep holding, no new commands
+    float_mid = det(MINIGAME_FLOAT, bbox=(290.0, 100.0, 310.0, 130.0))
+    cmds = fsm.step(snap(bar, float_mid), t + 0.2)
+    assert HoldLmb() not in cmds
+    assert ReleaseLmb() not in cmds
+
+
+def test_minigame_releases_when_float_above_75_percent():
+    fsm = make_fsm()
+    t = to_minigame(fsm)
+    bar = det(MINIGAME_BAR, bbox=BAR_BBOX)
+    float_left = det(MINIGAME_FLOAT, bbox=(150.0, 100.0, 170.0, 130.0))
+    fsm.step(snap(bar, float_left), t + 0.1)  # now holding
+    # float center x=440 -> 85% of the bar -> RELEASE
     float_right = det(MINIGAME_FLOAT, bbox=(430.0, 100.0, 450.0, 130.0))
-    cmds = fsm.step(snap(bar, zone, float_right), t + 0.2)
+    cmds = fsm.step(snap(bar, float_right), t + 0.2)
     assert ReleaseLmb() in cmds
 
 
@@ -239,9 +253,8 @@ def test_minigame_bar_gone_goes_to_result_and_releases():
     fsm = make_fsm()
     t = to_minigame(fsm)
     bar = det(MINIGAME_BAR, bbox=BAR_BBOX)
-    zone = det(MINIGAME_ZONE, bbox=ZONE_BBOX)
     float_left = det(MINIGAME_FLOAT, bbox=(150.0, 100.0, 170.0, 130.0))
-    fsm.step(snap(bar, zone, float_left), t + 0.1)  # now holding
+    fsm.step(snap(bar, float_left), t + 0.1)  # now holding
     cmds = fsm.step(EMPTY, t + 0.2)
     assert fsm.state is State.RESULT
     assert ReleaseLmb() in cmds
@@ -345,9 +358,8 @@ def test_stop_releases_held_button():
     fsm = make_fsm()
     t = to_minigame(fsm)
     bar = det(MINIGAME_BAR, bbox=BAR_BBOX)
-    zone = det(MINIGAME_ZONE, bbox=ZONE_BBOX)
     float_left = det(MINIGAME_FLOAT, bbox=(150.0, 100.0, 170.0, 130.0))
-    fsm.step(snap(bar, zone, float_left), t + 0.1)  # now holding
+    fsm.step(snap(bar, float_left), t + 0.1)  # now holding
     cmds = fsm.stop(t + 0.2)
     assert fsm.state is State.IDLE
     assert ReleaseLmb() in cmds
