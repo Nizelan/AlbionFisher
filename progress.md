@@ -19,7 +19,7 @@
 | AF-4 | Define YOLO class list for training | high | done | `model/classes.yaml` (7 classes) |
 | AF-5 | Owner: train YOLO model, drop `albionfisher.pt` into `model/` | high | pending | External — owner's dataset |
 | AF-6 | Architect plan: project scaffold (capture/detection/control/fsm/ui) | high | pending | Next loop step |
-| AF-7 | Confirm minigame mechanics on gameplay recording (SPEC §10 Q1) | medium | pending | Owner input |
+| AF-7 | Confirm minigame mechanics (SPEC §10 Q1) | medium | done | Owner: float drifts left; hold LMB moves right |
 
 ## In progress
 
@@ -50,3 +50,4 @@ _(none)_
 - Loop engineering scaffold committed; subagents in `.cursor/agents/`.
 - 2026-07-14 — Stack: Python 3.11+ / ultralytics YOLO / PySide6; vision-only (no memory reading). See `docs/SPEC.md`.
 - 2026-07-14 — YOLO classes fixed in `model/classes.yaml`; ID changes require retrain + progress.md note.
+- 2026-07-14 — Minigame mechanics confirmed by owner: float always drifts left, holding LMB moves it right (SPEC §5).
