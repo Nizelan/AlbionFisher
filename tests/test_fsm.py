@@ -22,7 +22,12 @@ from albionfisher.fsm.events import (
     ReleaseLmb,
     SetFps,
 )
-from albionfisher.fsm.machine import MAX_CAST_ATTEMPTS, RESULT_WINDOW_S, FishingFsm
+from albionfisher.fsm.machine import (
+    MAX_CAST_ATTEMPTS,
+    POPUP_DRAIN_S,
+    RESULT_WINDOW_S,
+    FishingFsm,
+)
 from albionfisher.fsm.states import State
 
 BAR_BBOX = (100.0, 100.0, 500.0, 130.0)
@@ -108,6 +113,16 @@ def test_find_zone_to_cast_emits_move_and_press():
     assert fsm.state is State.CAST
     assert MoveTo(450, 350) in cmds
     assert PressLmb(fsm._cfg.cast.hold_ms) in cmds
+
+
+def test_find_zone_with_bobber_in_water_resumes_wait_bite():
+    """Safety guard: never cast while the rod is already in the water."""
+    fsm = make_fsm()
+    fsm.start(0.0)
+    zone = det(FISHING_ZONE, bbox=(400.0, 300.0, 500.0, 400.0))
+    cmds = fsm.step(snap(zone, det(BOBBER_IDLE)), 1.0)
+    assert fsm.state is State.WAIT_BITE
+    assert not any(isinstance(c, PressLmb) for c in cmds)
 
 
 def test_find_zone_timeout_reports_and_retries():
@@ -256,10 +271,29 @@ def test_result_popup_counts_catch_and_loops():
     fsm.step(snap(det(CATCH_POPUP)), t + 0.2)
     assert fsm.counters.caught == 1
     assert fsm.consecutive_fails == 0  # success resets the fail streak
+    assert fsm.state is State.RESULT  # draining possible follow-up popups
+    fsm.step(EMPTY, t + 0.2 + POPUP_DRAIN_S)
+    assert fsm.state is State.FIND_ZONE
+
+
+def test_result_double_popup_counts_single_catch():
+    """Fish + seaweed produce two popups — must count as ONE catch."""
+    fsm = make_fsm()
+    t = to_minigame(fsm)
+    fsm.step(EMPTY, t + 0.1)  # -> RESULT
+    fsm.step(snap(det(CATCH_POPUP)), t + 0.2)  # fish popup
+    fsm.step(EMPTY, t + 0.5)  # brief gap between popups
+    fsm.step(snap(det(CATCH_POPUP)), t + 0.7)  # seaweed popup
+    assert fsm.counters.caught == 1  # not 2
+    assert fsm.state is State.RESULT
+    # drain window elapses after the LAST popup -> next cycle
+    fsm.step(EMPTY, t + 0.7 + POPUP_DRAIN_S)
+    assert fsm.counters.caught == 1
     assert fsm.state is State.FIND_ZONE
 
 
 def test_result_without_popup_counts_loss():
+    """Escaped fish shows no popup: minigame gone + no popup = loss, restart."""
     fsm = make_fsm()
     t = to_minigame(fsm)
     fsm.step(EMPTY, t + 0.1)  # -> RESULT
@@ -268,6 +302,17 @@ def test_result_without_popup_counts_loss():
     assert fsm.counters.lost == 1
     assert fsm.consecutive_fails == 1
     assert fsm.state is State.FIND_ZONE
+
+
+def test_result_no_popup_but_bobber_in_water_resumes_wait():
+    """Safety: no popup but the rod is still cast -> do NOT recast, wait for bite."""
+    fsm = make_fsm()
+    t = to_minigame(fsm)
+    fsm.step(EMPTY, t + 0.1)  # -> RESULT
+    cmds = fsm.step(snap(det(BOBBER_IDLE)), t + 0.1 + RESULT_WINDOW_S)
+    assert fsm.state is State.WAIT_BITE
+    assert fsm.counters.lost == 0  # not a loss — we are still fishing
+    assert not any(isinstance(c, PressLmb) for c in cmds)
 
 
 # -- stop conditions -------------------------------------------------------------------
@@ -292,6 +337,7 @@ def test_session_limit_auto_stop():
     fsm.step(EMPTY, t + 0.1)  # -> RESULT
     fsm.step(snap(det(CATCH_POPUP)), t + 0.2)
     assert fsm.counters.caught == 1
+    fsm.step(EMPTY, t + 0.2 + POPUP_DRAIN_S)  # drain window elapses
     assert fsm.state is State.IDLE
 
 

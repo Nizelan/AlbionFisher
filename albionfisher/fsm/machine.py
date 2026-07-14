@@ -33,6 +33,9 @@ from albionfisher.fsm.states import State
 
 MAX_CAST_ATTEMPTS = 3  # SPEC §5: repeat CAST at most 3 times
 RESULT_WINDOW_S = 2.0  # how long RESULT waits for catch_popup before counting a loss
+# After the first popup, keep absorbing follow-up popups (e.g. seaweed caught
+# together with the fish shows a second popup) until none are seen for this long.
+POPUP_DRAIN_S = 1.0
 
 
 @dataclass
@@ -53,6 +56,8 @@ class FishingFsm:
         self._cast_attempts = 0
         self._holding = False
         self._result_failed = False  # minigame reported the fish escaped
+        self._caught_this_result = False  # popup already counted for this cycle
+        self._last_popup_at: float | None = None
 
     # -- public API ---------------------------------------------------------
 
@@ -112,7 +117,8 @@ class FishingFsm:
         elif state is State.MINIGAME:
             cmds.append(SetFps(self._cfg.detection.minigame_fps))
         elif state is State.RESULT:
-            pass  # outcome resolved in _step_result
+            self._caught_this_result = False
+            self._last_popup_at = None
         return cmds
 
     def _register_fail(self, now: float, reason: str) -> list[Command]:
@@ -147,6 +153,12 @@ class FishingFsm:
         return []
 
     def _step_find_zone(self, snapshot: DetectionSnapshot, now: float) -> list[Command]:
+        # Safety guard: never cast while the bobber is already in the water —
+        # a cast press would retract the rod before the bite. Resume waiting.
+        if snapshot.best(BOBBER_IDLE) is not None:
+            cmds: list[Command] = [Notify("bobber already in water, resuming wait for bite")]
+            cmds += self._enter(State.WAIT_BITE, now)
+            return cmds
         zone = snapshot.best(FISHING_ZONE)
         if zone is not None:
             self._cast_target = zone.center
@@ -230,12 +242,33 @@ class FishingFsm:
         if self._result_failed:
             self._result_failed = False
             return self._register_fail(now, "fish escaped in minigame")
+
         if snapshot.best(CATCH_POPUP) is not None:
-            self.counters.caught += 1
-            self.consecutive_fails = 0
-            cmds: list[Command] = [Notify("fish caught")]
-            cmds += self._after_result(now)
-            return cmds
+            # A catch can produce several popups (e.g. seaweed pulled out with
+            # the fish). Count the catch once and keep draining popups so the
+            # next cycle does not misread a leftover popup.
+            self._last_popup_at = now
+            if not self._caught_this_result:
+                self._caught_this_result = True
+                self.counters.caught += 1
+                self.consecutive_fails = 0
+                return [Notify("fish caught")]
+            return []
+
+        if self._caught_this_result:
+            if self._last_popup_at is not None and now - self._last_popup_at >= POPUP_DRAIN_S:
+                return self._after_result(now)
+            return []  # brief gap between popups — keep draining
+
         if self.time_in_state(now) >= RESULT_WINDOW_S:
-            return self._register_fail(now, "no catch popup")
+            # No popup at all: the fish escaped (escapes show no popup) — but
+            # only restart if we are not actually still fishing. If the bobber
+            # is visible the rod is still cast; recasting would retract it.
+            if snapshot.best(BOBBER_IDLE) is not None:
+                cmds: list[Command] = [
+                    Notify("no popup but bobber still in water, resuming wait")
+                ]
+                cmds += self._enter(State.WAIT_BITE, now)
+                return cmds
+            return self._register_fail(now, "no catch popup, fish escaped")
         return []

@@ -22,6 +22,7 @@
 | AF-7 | Confirm minigame mechanics (SPEC §10 Q1) | medium | done | Owner: float drifts left; hold LMB moves right |
 | AF-8 | Implement MVP scaffold per architect plan | high | done | Verified 2026-07-14: pytest 41/41, ruff clean, compileall OK, lazy imports OK |
 | AF-9 | Live gameplay validation (SPEC §8 items 3-4) once model arrives | high | blocked | Blocked by AF-5 (owner's model) |
+| AF-10 | RESULT logic corrections: double popup (seaweed), no-popup escape, safe restart | high | done | Verified 2026-07-14: pytest 44/44, ruff clean |
 
 ## In progress
 
@@ -64,3 +65,4 @@ _(none)_
 - 2026-07-14 — Stack: Python 3.11+ / ultralytics YOLO / PySide6; vision-only (no memory reading). See `docs/SPEC.md`.
 - 2026-07-14 — YOLO classes fixed in `model/classes.yaml`; ID changes require retrain + progress.md note.
 - 2026-07-14 — Minigame mechanics confirmed by owner: float always drifts left, holding LMB moves it right (SPEC §5).
+- 2026-07-14 — RESULT semantics from owner: (a) fish+seaweed can show catch_popup twice — count once, drain popups ≥1 s before next cycle; (b) escaped fish shows NO popup — minigame gone + no popup for 2 s = loss; (c) before any restart check bobber_idle — if rod is still in water, resume WAIT_BITE instead of recasting (SPEC §5 "Логіка RESULT").
