@@ -5,7 +5,7 @@
 
 ## Current focus
 
-- **Goal:** Push loop scaffold to GitHub; then choose application stack
+- **Goal:** Choose application stack and define first feature milestone
 - **Status:** `in_progress`
 - **Last updated:** 2026-07-14
 
@@ -13,8 +13,8 @@
 
 | ID | Task | Priority | Status | Notes |
 |----|------|----------|--------|-------|
-| AF-1 | Install Git and run `scripts/connect-github.ps1`; push to origin | high | in_progress | Git not in PATH on dev machine yet |
-| AF-2 | Choose stack (C# / Python / other) and document build/test in a skill | high | pending | After AF-1 |
+| AF-1 | Push loop scaffold to GitHub | high | done | `f8a1fbb` on `origin/main` |
+| AF-2 | Choose stack (C# / Python / other) and document build/test in a skill | high | pending | Next |
 
 ## In progress
 
