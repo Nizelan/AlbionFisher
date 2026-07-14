@@ -18,25 +18,25 @@ MVP scaffold implemented: window capture, YOLO detection wrapper, fishing FSM,
 input control, PySide6 GUI, unit tests. Needs owner-trained model weights in
 `model/albionfisher.pt` to actually detect anything (see `docs/SPEC.md` §4).
 
-## Install
+## Quick start
 
 Requires **Windows 10/11** and **Python 3.11+**.
+
+**Double-click `run.bat`** — on first run it creates the venv and installs
+dependencies automatically (several minutes; torch is large), then opens the GUI.
+
+Drop your trained model into `model/albionfisher.pt`. Class list must match
+`model/classes.yaml` — the app verifies this at startup and warns on mismatch.
+Without weights the app still starts, in degraded mode with a warning banner.
+
+### Manual install / run
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt        # runtime (ultralytics/torch are heavy)
 pip install -r requirements-dev.txt    # pytest + ruff, for development
-```
-
-Drop your trained model into `model/albionfisher.pt`. Class list must match
-`model/classes.yaml` — the app verifies this at startup and warns on mismatch.
-Without weights the app still starts, in degraded mode with a warning banner.
-
-## Run
-
-```powershell
-python -m albionfisher
+python -m albionfisher                 # run the app
 ```
 
 1. Pick the Albion Online window from the dropdown (Refresh if empty).
