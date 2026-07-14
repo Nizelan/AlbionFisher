@@ -36,6 +36,8 @@ secrets.*
 logs/
 tmp/
 temp/
+app_err.txt
+app_out.txt
 
 # YOLO model weights — distributed manually, keep classes.yaml tracked
 model/*.pt
