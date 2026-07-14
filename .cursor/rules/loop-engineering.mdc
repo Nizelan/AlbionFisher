@@ -1,0 +1,12 @@
+---
+description: Loop engineering workflow for AlbionFisher — state, subagents, verification
+alwaysApply: true
+---
+
+# Loop engineering
+
+- Read `AGENTS.md` and `progress.md` at the start of substantial tasks.
+- Use subagents by role: triage → architect → developer → verifier.
+- Never mark backlog items done without verifier passing acceptance criteria.
+- Persist decisions and status in `progress.md`, not only in chat.
+- Remote repository: https://github.com/Nizelan/AlbionFisher.git

@@ -1,0 +1,41 @@
+# Build / runtime
+bin/
+obj/
+out/
+dist/
+build/
+*.exe
+*.dll
+*.pdb
+
+# Dependencies
+node_modules/
+packages/
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# IDE / OS
+.vs/
+.idea/
+*.user
+*.suo
+Thumbs.db
+Desktop.ini
+
+# Secrets — never commit
+.env
+.env.*
+*.key
+credentials.json
+secrets.*
+
+# Logs and temp
+*.log
+logs/
+tmp/
+temp/
+
+# Loop state backups (keep progress.md tracked)
+progress.*.bak
