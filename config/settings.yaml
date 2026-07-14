@@ -1,0 +1,25 @@
+# AlbionFisher user settings. Values here override the shipped defaults
+# (albionfisher/config/defaults.yaml). Delete a line to fall back to default.
+
+detection:
+  model_path: model/albionfisher.pt
+  conf_threshold: 0.5
+  idle_fps: 3          # detection FPS outside the minigame
+  minigame_fps: 20     # detection FPS during the minigame
+
+timeouts:              # seconds
+  find_zone: 10.0      # no fishing_zone found -> report + retry
+  cast_confirm: 5.0    # bobber must appear after a cast
+  bite: 30.0           # waiting for a bite before recasting
+  minigame_start: 3.0  # minigame bar must appear after hooking
+
+minigame:
+  deadzone_frac: 0.08    # fraction of zone width around center: no action inside
+  hysteresis_frac: 0.04  # extra margin before flipping hold/release
+
+cast:
+  hold_ms: 600         # LMB hold duration = cast strength
+
+stop:
+  max_consecutive_fails: 5
+  session_limit: null  # max fish per session; null = unlimited

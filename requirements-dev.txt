@@ -1,0 +1,5 @@
+# Development/test dependencies. Unit tests additionally need only PyYAML
+# from requirements.txt (the rest are lazily imported at runtime).
+pytest
+ruff
+PyYAML

@@ -1,0 +1,10 @@
+# Runtime dependencies (Windows 10/11, Python 3.11+). No exact pins on purpose.
+ultralytics
+opencv-python
+PySide6
+dxcam
+mss
+pywin32
+pydirectinput
+keyboard
+PyYAML
