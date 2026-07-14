@@ -5,7 +5,7 @@
 
 ## Current focus
 
-- **Goal:** MVP scaffold done and verified → next: owner trains model (AF-5), then live gameplay validation
+- **Goal:** Model delivered and loads OK → next: live gameplay validation (AF-9)
 - **Status:** `in_progress`
 - **Last updated:** 2026-07-14
 
@@ -17,11 +17,11 @@
 | AF-2 | Choose stack — decided: Python 3.11+, ultralytics YOLO, PySide6 UI | high | done | See `docs/SPEC.md` §3 |
 | AF-3 | Write program specification from owner description | high | done | `docs/SPEC.md` v0.1 |
 | AF-4 | Define YOLO class list for training | high | done | `model/classes.yaml` (7 classes) |
-| AF-5 | Owner: train YOLO model, drop `albionfisher.pt` into `model/` | high | pending | External — owner's dataset |
+| AF-5 | Owner: train YOLO model, drop `albionfisher.pt` into `model/` | high | done | 2026-07-14: weights delivered (5.5 MB), loads OK, classes match contract |
 | AF-6 | Architect plan: project scaffold (capture/detection/control/fsm/ui) | high | done | Plan approved and implemented in AF-8 |
 | AF-7 | Confirm minigame mechanics (SPEC §10 Q1) | medium | done | Owner: float drifts left; hold LMB moves right |
 | AF-8 | Implement MVP scaffold per architect plan | high | done | Verified 2026-07-14: pytest 41/41, ruff clean, compileall OK, lazy imports OK |
-| AF-9 | Live gameplay validation (SPEC §8 items 3-4) once model arrives | high | blocked | Blocked by AF-5 (owner's model) |
+| AF-9 | Live gameplay validation (SPEC §8 items 3-4) once model arrives | high | pending | Unblocked — model loaded; CPU inference ~51 ms (~20 FPS), meets ≥15 FPS minigame target |
 | AF-10 | RESULT logic corrections: double popup (seaweed), no-popup escape, safe restart | high | done | Verified 2026-07-14: pytest 44/44, ruff clean |
 
 ## In progress
