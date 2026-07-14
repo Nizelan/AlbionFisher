@@ -1,0 +1,22 @@
+# AlbionFisher — YOLO object classes
+# Single source of truth for model training and runtime detection.
+# Format: ultralytics data.yaml `names` section. Keep IDs stable —
+# changing them requires retraining and a note in progress.md.
+#
+# Training tip: use this file as the `names` block of your data.yaml:
+#   path: <dataset root>
+#   train: images/train
+#   val: images/val
+#   nc: 7
+#   names: <copy the map below>
+
+nc: 7
+
+names:
+  0: fishing_zone   # water area with active fish (splashes/ripples) — cast target
+  1: bobber_idle    # bobber floating on water, waiting state
+  2: bobber_bite    # bobber at the moment of a bite (submerging/splash) — hook trigger
+  3: minigame_bar   # the pulling minigame scale/bar UI element
+  4: minigame_float # moving float indicator inside the minigame bar
+  5: minigame_zone  # target (center) zone of the minigame bar to hold the float in
+  6: catch_popup    # catch result popup/icon confirming the cycle finished

@@ -5,7 +5,7 @@
 
 ## Current focus
 
-- **Goal:** Choose application stack and define first feature milestone
+- **Goal:** Spec approved → architect plan for MVP scaffold (capture + detection + FSM + UI)
 - **Status:** `in_progress`
 - **Last updated:** 2026-07-14
 
@@ -14,7 +14,12 @@
 | ID | Task | Priority | Status | Notes |
 |----|------|----------|--------|-------|
 | AF-1 | Push loop scaffold to GitHub | high | done | `f8a1fbb` on `origin/main` |
-| AF-2 | Choose stack (C# / Python / other) and document build/test in a skill | high | pending | Next |
+| AF-2 | Choose stack — decided: Python 3.11+, ultralytics YOLO, PySide6 UI | high | done | See `docs/SPEC.md` §3 |
+| AF-3 | Write program specification from owner description | high | done | `docs/SPEC.md` v0.1 |
+| AF-4 | Define YOLO class list for training | high | done | `model/classes.yaml` (7 classes) |
+| AF-5 | Owner: train YOLO model, drop `albionfisher.pt` into `model/` | high | pending | External — owner's dataset |
+| AF-6 | Architect plan: project scaffold (capture/detection/control/fsm/ui) | high | pending | Next loop step |
+| AF-7 | Confirm minigame mechanics on gameplay recording (SPEC §10 Q1) | medium | pending | Owner input |
 
 ## In progress
 
@@ -43,3 +48,5 @@ _(none)_
 <!-- Architecture and product decisions the loop must not re-litigate -->
 
 - Loop engineering scaffold committed; subagents in `.cursor/agents/`.
+- 2026-07-14 — Stack: Python 3.11+ / ultralytics YOLO / PySide6; vision-only (no memory reading). See `docs/SPEC.md`.
+- 2026-07-14 — YOLO classes fixed in `model/classes.yaml`; ID changes require retrain + progress.md note.

@@ -37,5 +37,10 @@ logs/
 tmp/
 temp/
 
+# YOLO model weights — distributed manually, keep classes.yaml tracked
+model/*.pt
+model/*.onnx
+datasets/
+
 # Loop state backups (keep progress.md tracked)
 progress.*.bak
